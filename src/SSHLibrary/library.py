@@ -16,25 +16,27 @@
 from __future__ import print_function
 
 import re
-import os
-from .deco import keyword
-try:
-    from robot.api import logger
-except ImportError:
-    logger = None
 
+from .logger import logger
+
+from robot.utils import is_string, is_truthy, plural_or_not
+from robot.api.deco import keyword, library
 from .sshconnectioncache import SSHConnectionCache
-from .abstractclient import SSHClientException
+from .client import SSHClientException
 from .client import SSHClient
-from .config import (Configuration, IntegerEntry, LogLevelEntry, NewlineEntry,
-                     StringEntry, TimeEntry)
-from .utils import ConnectionCache, is_string, is_truthy, plural_or_not
+from .config import (
+    Configuration,
+    IntegerEntry,
+    LogLevelEntry,
+    NewlineEntry,
+    StringEntry,
+    TimeEntry,
+)
 from .version import VERSION
 
 
-__version__ = VERSION
-
-class SSHLibrary(object):
+@library(version=VERSION, scope="GLOBAL")
+class SSHLibrary:
     """SSHLibrary is a Robot Framework test library for SSH and SFTP.
 
      This document explains how to use keywords provided by SSHLibrary.
@@ -52,11 +54,9 @@ class SSHLibrary(object):
     - Ensuring that files or directories exist on the remote machine
       (e.g. `File Should Exist` and `Directory Should Not Exist`).
 
-    This library works both with Python and Jython, but uses different
-    SSH modules internally depending on the interpreter. See
+    This library works with Python 3.6+. See
     [http://robotframework.org/SSHLibrary/#installation|installation instructions]
-    for more details about the dependencies. IronPython is unfortunately
-    not supported. Python 3 is supported starting from SSHLibrary 3.0.0.
+    for more details about the dependencies.
 
     == Table of contents ==
 
@@ -392,9 +392,7 @@ class SSHLibrary(object):
      There are some limitations to the current SCP implementation::
      - When using SCP, files cannot be altered during transfer and ``newline`` argument does not work.
      - If ``scp=ALL`` only ``source`` and ``destination`` arguments will work on the keywords. The directories are
-     transferred recursively. Also, when running with Jython `Put Directory` and `Get Directory` won't work due to
-     current Trilead implementation.
-     - If running with Jython you can encounter some encoding issues when transferring files with non-ascii characters.
+     transferred recursively.
 
      SCP transfer was introduced in SSHLibrary 3.3.0.
 
@@ -403,8 +401,7 @@ class SSHLibrary(object):
     preserve the original modify time and access time of transferred files and directories. This is done using the
     ``scp_preserve_times`` argument. This argument works only when ``scp`` argument is set to ``TRANSFER`` or ``ALL``.
     When moving directory with ``scp`` set to ``TRANSFER`` and ``scp_preserve_times`` is enabled only the files inside
-    the director will keep their original timestamps. Also, when running with Jython ``scp_preserve_times`` won't work
-    due to current current Trilead implementation.
+    the director will keep their original timestamps.
 
     ``scp_preserve_times`` was introduced in SSHLibrary 3.6.0.
 
@@ -440,33 +437,33 @@ class SSHLibrary(object):
     | `Run Keyword And Expect Error` | Non-existing index or alias 'conn'. | `Switch Connection` | conn        |
 
     """
-    ROBOT_LIBRARY_SCOPE = 'GLOBAL'
-    ROBOT_LIBRARY_VERSION = __version__
 
-    DEFAULT_TIMEOUT = '3 seconds'
-    DEFAULT_NEWLINE = 'LF'
+    DEFAULT_TIMEOUT = "3 seconds"
+    DEFAULT_NEWLINE = "LF"
     DEFAULT_PROMPT = None
-    DEFAULT_LOGLEVEL = 'INFO'
-    DEFAULT_TERM_TYPE = 'vt100'
+    DEFAULT_LOGLEVEL = "INFO"
+    DEFAULT_TERM_TYPE = "vt100"
     DEFAULT_TERM_WIDTH = 80
     DEFAULT_TERM_HEIGHT = 24
-    DEFAULT_PATH_SEPARATOR = '/'
-    DEFAULT_ENCODING = 'UTF-8'
+    DEFAULT_PATH_SEPARATOR = "/"
+    DEFAULT_ENCODING = "UTF-8"
     DEFAULT_ESCAPE_ANSI = False
-    DEFAULT_ENCODING_ERRORS = 'strict'
+    DEFAULT_ENCODING_ERRORS = "strict"
 
-    def __init__(self,
-                 timeout=DEFAULT_TIMEOUT,
-                 newline=DEFAULT_NEWLINE,
-                 prompt=DEFAULT_PROMPT,
-                 loglevel=DEFAULT_LOGLEVEL,
-                 term_type=DEFAULT_TERM_TYPE,
-                 width=DEFAULT_TERM_WIDTH,
-                 height=DEFAULT_TERM_HEIGHT,
-                 path_separator=DEFAULT_PATH_SEPARATOR,
-                 encoding=DEFAULT_ENCODING,
-                 escape_ansi=DEFAULT_ESCAPE_ANSI,
-                 encoding_errors=DEFAULT_ENCODING_ERRORS):
+    def __init__(
+        self,
+        timeout=DEFAULT_TIMEOUT,
+        newline=DEFAULT_NEWLINE,
+        prompt=DEFAULT_PROMPT,
+        loglevel=DEFAULT_LOGLEVEL,
+        term_type=DEFAULT_TERM_TYPE,
+        width=DEFAULT_TERM_WIDTH,
+        height=DEFAULT_TERM_HEIGHT,
+        path_separator=DEFAULT_PATH_SEPARATOR,
+        encoding=DEFAULT_ENCODING,
+        escape_ansi=DEFAULT_ESCAPE_ANSI,
+        encoding_errors=DEFAULT_ENCODING_ERRORS,
+    ):
         """SSHLibrary allows some import time `configuration`.
 
         If the library is imported without any arguments, the library
@@ -504,7 +501,7 @@ class SSHLibrary(object):
             path_separator or self.DEFAULT_PATH_SEPARATOR,
             encoding or self.DEFAULT_ENCODING,
             escape_ansi or self.DEFAULT_ESCAPE_ANSI,
-            encoding_errors or self.DEFAULT_ENCODING_ERRORS
+            encoding_errors or self.DEFAULT_ENCODING_ERRORS,
         )
         self._last_commands = dict()
 
@@ -512,11 +509,21 @@ class SSHLibrary(object):
     def current(self):
         return self._connections.current
 
-    @keyword(types=None)
-    def set_default_configuration(self, timeout=None, newline=None, prompt=None,
-                                  loglevel=None, term_type=None, width=None,
-                                  height=None, path_separator=None,
-                                  encoding=None, escape_ansi=None, encoding_errors=None):
+    @keyword(tags=("configuration",))
+    def set_default_configuration(
+        self,
+        timeout=None,
+        newline=None,
+        prompt=None,
+        loglevel=None,
+        term_type=None,
+        width=None,
+        height=None,
+        path_separator=None,
+        encoding=None,
+        escape_ansi=None,
+        encoding_errors=None,
+    ):
         """Update the default `configuration`.
 
         Please note that using this keyword does not affect the already
@@ -547,14 +554,34 @@ class SSHLibrary(object):
         | `Should Be Equal As Integers` | ${emea.timeout}    | 20       |
         | `Should Be Equal As Integers` | ${apac.timeout}    | 20       |
         """
-        self._config.update(timeout=timeout, newline=newline, prompt=prompt,
-                            loglevel=loglevel, term_type=term_type, width=width,
-                            height=height, path_separator=path_separator,
-                            encoding=encoding, escape_ansi=escape_ansi, encoding_errors=encoding_errors)
+        self._config.update(
+            timeout=timeout,
+            newline=newline,
+            prompt=prompt,
+            loglevel=loglevel,
+            term_type=term_type,
+            width=width,
+            height=height,
+            path_separator=path_separator,
+            encoding=encoding,
+            escape_ansi=escape_ansi,
+            encoding_errors=encoding_errors,
+        )
 
-    def set_client_configuration(self, timeout=None, newline=None, prompt=None,
-                                 term_type=None, width=None, height=None,
-                                 path_separator=None, encoding=None, escape_ansi=None, encoding_errors=None):
+    @keyword(tags=("configuration",))
+    def set_client_configuration(
+        self,
+        timeout=None,
+        newline=None,
+        prompt=None,
+        term_type=None,
+        width=None,
+        height=None,
+        path_separator=None,
+        encoding=None,
+        escape_ansi=None,
+        encoding_errors=None,
+    ):
         """Update the `configuration` of the current connection.
 
         Only parameters whose value is other than ``None`` are updated.
@@ -582,16 +609,21 @@ class SSHLibrary(object):
 
         | `Open Connection`          | 192.168.1.1    |
         | `Set Client Configuration` | term_type=ansi | width=40 |
-
-        *Note:* Setting ``width`` and ``height`` does not work when using Jython.
         """
-        self.current.config.update(timeout=timeout, newline=newline,
-                                   prompt=prompt, term_type=term_type,
-                                   width=width, height=height,
-                                   path_separator=path_separator,
-                                   encoding=encoding, escape_ansi=escape_ansi,
-                                   encoding_errors=encoding_errors)
+        self.current.config.update(
+            timeout=timeout,
+            newline=newline,
+            prompt=prompt,
+            term_type=term_type,
+            width=width,
+            height=height,
+            path_separator=path_separator,
+            encoding=encoding,
+            escape_ansi=escape_ansi,
+            encoding_errors=encoding_errors,
+        )
 
+    @keyword(tags=("configuration",))
     def enable_ssh_logging(self, logfile):
         """Enables logging of SSH protocol output to given ``logfile``.
 
@@ -608,24 +640,32 @@ class SSHLibrary(object):
         | `Open Connection`    | build.local.net | # Logged     |
         | # Do something with the connections    |
         | # Check myserver.log for detailed debug information   |
-
-        *Note:* This keyword does not work when using Jython.
         """
         if SSHClient.enable_logging(logfile):
-            self._log('SSH log is written to <a href="%s">file</a>.' % logfile,
-                      'HTML')
+            self._log(
+                f'SSH log is written to <a href="{logfile}">file</a>.', "HTML")
 
-    def open_connection(self, host, alias=None, port=22, timeout=None,
-                        newline=None, prompt=None, term_type=None, width=None,
-                        height=None, path_separator=None, encoding=None, escape_ansi=None, encoding_errors=None):
+    @keyword(tags=("connection",))
+    def open_connection(
+        self,
+        host,
+        alias=None,
+        port=22,
+        timeout=None,
+        newline=None,
+        prompt=None,
+        term_type=None,
+        width=None,
+        height=None,
+        path_separator=None,
+        encoding=None,
+        escape_ansi=None,
+        encoding_errors=None,
+    ):
         """Opens a new SSH connection to the given ``host`` and ``port``.
 
         The new connection is made active. Possible existing connections
         are left open in the background.
-
-        Note that on Jython this keyword actually opens a connection and
-        will fail immediately on unreachable hosts. On Python the actual
-        connection attempt will not be done until `Login` is called.
 
         This keyword returns the index of the new connection which can be used
         later to switch back to it. Indices start from ``1`` and are reset
@@ -678,8 +718,6 @@ class SSHLibrary(object):
         The connection to the server can also be made like this:
 
         | `Open connection` | my_custom_hostname |
-
-        ``Host`` entries are not read from config file when running with Jython.
         """
         timeout = timeout or self._config.timeout
         newline = newline or self._config.newline
@@ -691,12 +729,26 @@ class SSHLibrary(object):
         encoding = encoding or self._config.encoding
         escape_ansi = escape_ansi or self._config.escape_ansi
         encoding_errors = encoding_errors or self._config.encoding_errors
-        client = SSHClient(host, alias, port, timeout, newline, prompt,
-                           term_type, width, height, path_separator, encoding, escape_ansi, encoding_errors)
+        client = SSHClient(
+            host,
+            alias,
+            port,
+            timeout,
+            newline,
+            prompt,
+            term_type,
+            width,
+            height,
+            path_separator,
+            encoding,
+            escape_ansi,
+            encoding_errors,
+        )
         connection_index = self._connections.register(client, alias)
         client.config.update(index=connection_index)
         return connection_index
 
+    @keyword(tags=("connection",))
     def switch_connection(self, index_or_alias):
         """Switches the active connection by index or alias.
 
@@ -729,6 +781,7 @@ class SSHLibrary(object):
             self._connections.switch(index_or_alias)
         return old_index
 
+    @keyword(tags=("connection",))
     def close_connection(self):
         """Closes the current connection.
 
@@ -745,7 +798,7 @@ class SSHLibrary(object):
         connections = self._connections
         connections.close_current()
 
-
+    @keyword(tags=("connection",))
     def close_all_connections(self):
         """Closes all open connections.
 
@@ -764,10 +817,23 @@ class SSHLibrary(object):
         """
         self._connections.close_all()
 
-    def get_connection(self, index_or_alias=None, index=False, host=False,
-                       alias=False, port=False, timeout=False, newline=False,
-                       prompt=False, term_type=False, width=False, height=False,
-                       encoding=False, escape_ansi=False):
+    @keyword(tags=("connection",))
+    def get_connection(
+        self,
+        index_or_alias=None,
+        index=False,
+        host=False,
+        alias=False,
+        port=False,
+        timeout=False,
+        newline=False,
+        prompt=False,
+        term_type=False,
+        width=False,
+        height=False,
+        encoding=False,
+        escape_ansi=False,
+    ):
         """Returns information about the connection.
 
         Connection is not changed by this keyword, use `Switch Connection` to
@@ -856,38 +922,70 @@ class SSHLibrary(object):
         except AttributeError:
             config = SSHClient(None).config
         self._log(str(config), self._config.loglevel)
-        return_values = tuple(self._get_config_values(config, index, host,
-                                                      alias, port, timeout,
-                                                      newline, prompt,
-                                                      term_type, width, height,
-                                                      encoding, escape_ansi))
+        return_values = tuple(
+            self._get_config_values(
+                config,
+                index,
+                host,
+                alias,
+                port,
+                timeout,
+                newline,
+                prompt,
+                term_type,
+                width,
+                height,
+                encoding,
+                escape_ansi,
+            )
+        )
         if not return_values:
             return config
         if len(return_values) == 1:
             return return_values[0]
         return return_values
 
-    def _log(self, msg, level='INFO'):
+    def _log(self, msg, level="INFO"):
         level = self._active_loglevel(level)
-        if level != 'NONE':
+        if level != "NONE":
             msg = msg.strip()
             if not msg:
                 return
             if logger:
                 logger.write(msg, level)
             else:
-                print('*%s* %s' % (level, msg))
+                print(f"*{level}* {msg}")
 
     def _active_loglevel(self, level):
         if level is None:
             return self._config.loglevel
-        if is_string(level) and \
-                level.upper() in ['TRACE', 'DEBUG', 'INFO', 'WARN', 'HTML', 'NONE']:
+        if is_string(level) and level.upper() in [
+            "TRACE",
+            "DEBUG",
+            "INFO",
+            "WARN",
+            "HTML",
+            "NONE",
+        ]:
             return level.upper()
-        raise AssertionError("Invalid log level '%s'." % level)
+        raise AssertionError(f"Invalid log level '{level}'.")
 
-    def _get_config_values(self, config, index, host, alias, port, timeout,
-                           newline, prompt, term_type, width, height, encoding, escape_ansi):
+    def _get_config_values(
+        self,
+        config,
+        index,
+        host,
+        alias,
+        port,
+        timeout,
+        newline,
+        prompt,
+        term_type,
+        width,
+        height,
+        encoding,
+        escape_ansi,
+    ):
         if is_truthy(index):
             yield config.index
         if is_truthy(host):
@@ -913,6 +1011,7 @@ class SSHLibrary(object):
         if is_truthy(escape_ansi):
             yield config.escape_ansi
 
+    @keyword(tags=("connection",))
     def get_connections(self):
         """Returns information about all the open connections.
 
@@ -936,8 +1035,20 @@ class SSHLibrary(object):
             self._log(str(c), self._config.loglevel)
         return configs
 
-    def login(self, username=None, password=None, allow_agent=False, look_for_keys=False, delay='0.5 seconds',
-              proxy_cmd=None, read_config=False, jumphost_index_or_alias=None, keep_alive_interval='0 seconds'):
+    @keyword(tags=("login",))
+    def login(
+        self,
+        username=None,
+        password=None,
+        allow_agent=False,
+        look_for_keys=False,
+        delay="0.5 seconds",
+        proxy_cmd=None,
+        read_config=False,
+        jumphost_index_or_alias=None,
+        keep_alive_interval="0 seconds",
+        disabled_algorithms=None,
+    ):
         """Logs into the SSH server with the given ``username`` and ``password``.
 
         Connection must be opened before using this keyword.
@@ -973,8 +1084,10 @@ class SSHLibrary(object):
 
         ``keep_alive_interval`` is new in SSHLibrary 3.7.0.
 
-        *Note:* ``allow_agent``, ``look_for_keys``, ``proxy_cmd``, ``jumphost_index_or_alias``,
-        ``read_config`` and ``keep_alive_interval`` do not work when using Jython.
+        ``disabled_algorithms`` is a list of algorithms that should be disabled.
+        For example, if you need to disable diffie-hellman-group16-sha512 key exchange 
+        (perhaps because your code talks to a server which implements it differently from Paramiko), 
+        specify disabled_algorithms={"kex": ["diffie-hellman-group16-sha512"]}
 
         Example that logs in and returns the output:
 
@@ -998,21 +1111,53 @@ class SSHLibrary(object):
         First, add the key to the authentication agent with: ``ssh-add /path/to/keyfile``.
         | `Open Connection` | linux.server.com |
         | `Login` | johndoe | allow_agent=True |
+
+        Example login with disabled algorithms:
+        | `Open Connection` | linux.server.com |
+        | `VAR`             | @{pubkeys}             | rsa-sha2-512    rsa-sha2-256 |
+        | `VAR`             | &{disabled_algorithms} | pubkeys=${pubkeys} |
+        | `Login`           | username=johndoe       | disabled_algorithms=${disabled_algorithms} |
         """
-        jumphost_connection_conf = self.get_connection(index_or_alias=jumphost_index_or_alias) \
-            if jumphost_index_or_alias else None
-        jumphost_connection = self._connections.connections[jumphost_connection_conf.index-1] \
-            if jumphost_connection_conf and jumphost_connection_conf.index else None
+        jumphost_connection_conf = (
+            self.get_connection(index_or_alias=jumphost_index_or_alias)
+            if jumphost_index_or_alias
+            else None
+        )
+        jumphost_connection = (
+            self._connections.connections[jumphost_connection_conf.index - 1]
+            if jumphost_connection_conf and jumphost_connection_conf.index
+            else None
+        )
 
-        return self._login(self.current.login, username, password, is_truthy(allow_agent),
-                           is_truthy(look_for_keys), delay, proxy_cmd, is_truthy(read_config),
-                           jumphost_connection, keep_alive_interval)
+        return self._login(
+            self.current.login,
+            username,
+            password,
+            is_truthy(allow_agent),
+            is_truthy(look_for_keys),
+            delay,
+            proxy_cmd,
+            is_truthy(read_config),
+            jumphost_connection,
+            keep_alive_interval,
+            disabled_algorithms,
+        )
 
-    def login_with_public_key(self, username=None, keyfile=None, password='',
-                              allow_agent=False, look_for_keys=False,
-                              delay='0.5 seconds', proxy_cmd=None,
-                              jumphost_index_or_alias=None,
-                              read_config=False, keep_alive_interval='0 seconds'):
+    @keyword(tags=("login",))
+    def login_with_public_key(
+        self,
+        username=None,
+        keyfile=None,
+        password="",
+        allow_agent=False,
+        look_for_keys=False,
+        delay="0.5 seconds",
+        proxy_cmd=None,
+        jumphost_index_or_alias=None,
+        read_config=False,
+        keep_alive_interval="0 seconds",
+        disabled_algorithms=None,
+    ):
         """Logs into the SSH server using key-based authentication.
 
         Connection must be opened before using this keyword.
@@ -1067,31 +1212,61 @@ class SSHLibrary(object):
 
         ``keep_alive_interval`` is new in SSHLibrary 3.7.0.
 
-        *Note:* ``allow_agent``, ``look_for_keys``, ``proxy_cmd``, ``jumphost_index_or_alias``,
-        ``read_config`` and ``keep_alive_interval`` do not work when using Jython.
+        ``disabled_algorithms`` is a list of algorithms that should be disabled.
+        For example, if you need to disable diffie-hellman-group16-sha512 key exchange 
+        (perhaps because your code talks to a server which implements it differently from Paramiko), 
+        specify disabled_algorithms={"kex": ["diffie-hellman-group16-sha512"]}
+
+        Example login with disabled algorithms:
+        | `Open Connection`       | linux.server.com |
+        | `VAR`                   | @{pubkeys}             | rsa-sha2-512    rsa-sha2-256 |
+        | `VAR`                   | &{disabled_algorithms} | pubkeys=${pubkeys} |
+        | `Login With Public Key` | username=johndoe       | keyfile=key | disabled_algorithms=${disabled_algorithms} |
         """
         if proxy_cmd and jumphost_index_or_alias:
-            raise ValueError("`proxy_cmd` and `jumphost_connection` are mutually exclusive SSH features.")
-        jumphost_connection_conf = self.get_connection(index_or_alias=jumphost_index_or_alias) if jumphost_index_or_alias else None
-        jumphost_connection = self._connections.connections[jumphost_connection_conf.index-1] if jumphost_connection_conf and jumphost_connection_conf.index else None
-        return self._login(self.current.login_with_public_key, username,
-                           keyfile, password, is_truthy(allow_agent),
-                           is_truthy(look_for_keys), delay, proxy_cmd,
-                           jumphost_connection, is_truthy(read_config), keep_alive_interval)
+            raise ValueError(
+                "`proxy_cmd` and `jumphost_connection` are mutually exclusive SSH features."
+            )
+        jumphost_connection_conf = (
+            self.get_connection(index_or_alias=jumphost_index_or_alias)
+            if jumphost_index_or_alias
+            else None
+        )
+        jumphost_connection = (
+            self._connections.connections[jumphost_connection_conf.index - 1]
+            if jumphost_connection_conf and jumphost_connection_conf.index
+            else None
+        )
+        return self._login(
+            self.current.login_with_public_key,
+            username,
+            keyfile,
+            password,
+            is_truthy(allow_agent),
+            is_truthy(look_for_keys),
+            delay,
+            proxy_cmd,
+            jumphost_connection,
+            is_truthy(read_config),
+            keep_alive_interval,
+            disabled_algorithms,
+        )
 
     def _login(self, login_method, username, *args):
-        self._log("Logging into '%s:%s' as '%s'."
-                   % (self.current.config.host, self.current.config.port,
-                      username), self._config.loglevel)
+        self._log(
+            f"Logging into '{self.current.config.host}:{self.current.config.port}' as '{self.current.config.host}'.",
+            self._config.loglevel,
+        )
         try:
             login_output = login_method(username, *args)
             if is_truthy(self.current.config.escape_ansi):
                 login_output = self._escape_ansi_sequences(login_output)
-            self._log('Read output: %s' % login_output, self._config.loglevel)
+            self._log(f"Read output: {login_output}", self._config.loglevel)
             return login_output
         except SSHClientException as e:
             raise RuntimeError(e)
 
+    @keyword(tags=("login",))
     def get_pre_login_banner(self, host=None, port=22):
         """Returns the banner supplied by the server upon connect.
 
@@ -1113,20 +1288,32 @@ class SSHLibrary(object):
         | `Should Be Equal`  | ${banner}              | Testing pre-login banner |
 
         New in SSHLibrary 3.0.0.
-
-        *Note:* This keyword does not work when using Jython.
         """
         if host:
             banner = SSHClient.get_banner_without_login(host, port)
         elif self.current:
             banner = self.current.get_banner()
         else:
-            raise RuntimeError("'host' argument is mandatory if there is no open connection.")
+            raise RuntimeError(
+                "'host' argument is mandatory if there is no open connection."
+            )
         return banner.decode(self.DEFAULT_ENCODING)
 
-    def execute_command(self, command, return_stdout=True, return_stderr=False,
-                        return_rc=False, sudo=False,  sudo_password=None, timeout=None, output_during_execution=False,
-                        output_if_timeout=False, invoke_subsystem=False, forward_agent=False):
+    @keyword(tags=("command",))
+    def execute_command(
+        self,
+        command,
+        return_stdout=True,
+        return_stderr=False,
+        return_rc=False,
+        sudo=False,
+        sudo_password=None,
+        timeout=None,
+        output_during_execution=False,
+        output_if_timeout=False,
+        invoke_subsystem=False,
+        forward_agent=False,
+    ):
         """Executes ``command`` on the remote machine and returns its outputs.
 
         This keyword executes the ``command`` and returns after the execution
@@ -1182,9 +1369,8 @@ class SSHLibrary(object):
         ``command`` argument. If the server allows it, the channel will then be
         directly connected to the requested subsystem.
 
-        ``forward_agent`` determines whether to forward the local SSH Agent process to the process being executed. 
-        This assumes that there is an agent in use (i.e. `eval $(ssh-agent)`). Setting ``forward_agent`` does not
-        work with Jython.
+        ``forward_agent`` determines whether to forward the local SSH Agent process to the process being executed.
+        This assumes that there is an agent in use (i.e. `eval $(ssh-agent)`).
         | `Execute Command` | ssh-add -L | forward_agent=True |
 
         ``invoke_subsystem`` and ``forward_agent`` are new in SSHLibrary 3.4.0.
@@ -1193,21 +1379,35 @@ class SSHLibrary(object):
 
         ``output_if_timeout`` if the executed command doesn't end before reaching timeout, the parameter will log the
         output of the command at the moment of timeout.
-
-        ``output_during_execution`` and ``output_if_timeout`` are not working with Jython. New in SSHLibrary 3.5.0.
         """
         if not is_truthy(sudo):
-            self._log("Executing command '%s'." % command, self._config.loglevel)
+            self._log(f"Executing command '{command}'.", self._config.loglevel)
         else:
-            self._log("Executing command 'sudo %s'." % command, self._config.loglevel)
-        opts = self._legacy_output_options(return_stdout, return_stderr,
-                                           return_rc)
-        stdout, stderr, rc = self.current.execute_command(command, sudo, sudo_password,
-                                                          timeout, output_during_execution, output_if_timeout,
-                                                          is_truthy(invoke_subsystem), forward_agent)
+            self._log(
+                f"Executing command 'sudo {command}'.", self._config.loglevel)
+        opts = self._legacy_output_options(
+            return_stdout, return_stderr, return_rc)
+        stdout, stderr, rc = self.current.execute_command(
+            command,
+            sudo,
+            sudo_password,
+            timeout,
+            output_during_execution,
+            output_if_timeout,
+            is_truthy(invoke_subsystem),
+            forward_agent,
+        )
         return self._return_command_output(stdout, stderr, rc, *opts)
 
-    def start_command(self, command, sudo=False,  sudo_password=None, invoke_subsystem=False, forward_agent=False):
+    @keyword(tags=("command",))
+    def start_command(
+        self,
+        command,
+        sudo=False,
+        sudo_password=None,
+        invoke_subsystem=False,
+        forward_agent=False,
+    ):
         """Starts execution of the ``command`` on the remote machine and returns immediately.
 
         This keyword returns nothing and does not wait for the ``command``
@@ -1251,18 +1451,27 @@ class SSHLibrary(object):
         ``invoke_subsystem`` is new in SSHLibrary 3.4.0.
         """
         if not is_truthy(sudo):
-            self._log("Starting command '%s'." % command, self._config.loglevel)
+            self._log(f"Starting command '{command}'.", self._config.loglevel)
         else:
-            self._log("Starting command 'sudo %s'." % command, self._config.loglevel)
+            self._log(
+                f"Starting command 'sudo {command}'.", self._config.loglevel)
         if self.current.config.index not in self._last_commands.keys():
             self._last_commands[self.current.config.index] = command
         else:
             temp_dict = {self.current.config.index: command}
             self._last_commands.update(temp_dict)
-        self.current.start_command(command, sudo, sudo_password, is_truthy(invoke_subsystem), is_truthy(forward_agent))
+        self.current.start_command(
+            command,
+            sudo,
+            sudo_password,
+            is_truthy(invoke_subsystem),
+            is_truthy(forward_agent),
+        )
 
-    def read_command_output(self, return_stdout=True, return_stderr=False,
-                            return_rc=False, timeout=None):
+    @keyword(tags=("command",))
+    def read_command_output(
+        self, return_stdout=True, return_stderr=False, return_rc=False, timeout=None
+    ):
         """Returns outputs of the most recent started command.
 
         At least one command must have been started using `Start Command`
@@ -1310,16 +1519,23 @@ class SSHLibrary(object):
 
         This keyword logs the read command with log level ``INFO``.
         """
-        self._log("Reading output of command '%s'." % self._last_commands.get(self.current.config.index), self._config.loglevel)
-        opts = self._legacy_output_options(return_stdout, return_stderr,
-                                           return_rc)
+        self._log(
+            f"Reading output of command '{self._last_commands.get(self.current.config.index)}'.",
+            self._config.loglevel,
+        )
+        opts = self._legacy_output_options(
+            return_stdout, return_stderr, return_rc)
         try:
-            stdout, stderr, rc = self.current.read_command_output(timeout=timeout)
+            stdout, stderr, rc = self.current.read_command_output(
+                timeout=timeout)
         except SSHClientException as msg:
             raise RuntimeError(msg)
         return self._return_command_output(stdout, stderr, rc, *opts)
 
-    def create_local_ssh_tunnel(self, local_port, remote_host, remote_port=22, bind_address=None):
+    @keyword(tags=("connection",))
+    def create_local_ssh_tunnel(
+        self, local_port, remote_host, remote_port=22, bind_address=None
+    ):
         """
         The keyword uses the existing connection to set up local port forwarding
         (the openssh -L option) from a local port through a tunneled
@@ -1340,8 +1556,7 @@ class SSHLibrary(object):
 
         By default, anyone can connect on the specified port on the SSH client
         because the local machine listens on all interfaces. Access can be
-        restricted by specifying a ``bind_address``. Setting ``bind_address``
-        does not work with Jython.
+        restricted by specifying a ``bind_address``.
 
         Example:
 
@@ -1349,36 +1564,39 @@ class SSHLibrary(object):
 
         ``bind_address`` is new in SSHLibrary 3.3.0.
         """
-        self.current.create_local_ssh_tunnel(local_port, remote_host, remote_port, bind_address)
+        self.current.create_local_ssh_tunnel(
+            local_port, remote_host, remote_port, bind_address
+        )
 
     def _legacy_output_options(self, stdout, stderr, rc):
         if not is_string(stdout):
             return stdout, stderr, rc
         stdout = stdout.lower()
-        if stdout == 'stderr':
+        if stdout == "stderr":
             return False, True, rc
-        if stdout == 'both':
+        if stdout == "both":
             return True, True, rc
         return stdout, stderr, rc
 
-    def _return_command_output(self, stdout, stderr, rc, return_stdout,
-                               return_stderr, return_rc):
-        self._log("Command exited with return code %d." % rc, self._config.loglevel)
+    def _return_command_output(
+        self, stdout, stderr, rc, return_stdout, return_stderr, return_rc
+    ):
+        self._log(
+            f"Command exited with return code {rc}.", self._config.loglevel)
         ret = []
         if is_truthy(return_stdout):
-            ret.append(stdout.rstrip('\n'))
+            ret.append(stdout.rstrip("\n"))
         if is_truthy(return_stderr):
-            ret.append(stderr.rstrip('\n'))
+            ret.append(stderr.rstrip("\n"))
         if is_truthy(return_rc):
             ret.append(rc)
         if len(ret) == 1:
             return ret[0]
         return ret
 
+    @keyword(tags=("command",))
     def write(self, text, loglevel=None):
         """Writes the given ``text`` on the remote machine and appends a newline.
-
-        Appended `newline` can be configured.
 
         This keyword returns and consumes the written ``text``
         (including the appended newline) from the server output. See the
@@ -1386,6 +1604,8 @@ class SSHLibrary(object):
 
         The written ``text`` is logged. ``loglevel`` can be used to override
         the default `log level`.
+
+        If the written text cannot be read from shell, `None` is returned.
 
         Example:
         | ${written}=          | `Write`         | su                         |
@@ -1400,26 +1620,34 @@ class SSHLibrary(object):
         See also `Write Bare`.
         """
         self._write(text, add_newline=True)
-        return self._read_and_log(loglevel, self.current.read_until_newline)
 
-    def write_bare(self, text):
+        try:
+            return self._read_and_log(loglevel, self.current.read_until_newline)
+        except Exception as e:
+            logger.warn(e)
+            return None
+
+    @keyword(tags=("command",))
+    def write_bare(self, text, add_newline=False):
         """Writes the given ``text`` on the remote machine without appending a newline.
 
         Unlike `Write`, this keyword returns and consumes nothing. See the
         `Interactive shells` section for more information.
 
+        Appended `newline` can be configured with `add_newline`.
+
         Example:
-        | `Write Bare`     | su\\n            |
+        | `Write Bare`     | su\\n            | # or instead of \\n: add_newline=True
         | ${output}=       | `Read`           |
         | `Should Contain` | ${output}        | su                         | # Was not consumed from output |
         | `Should Contain` | ${output}        | Password:                  |
-        | `Write Bare`     | invalidpasswd\\n |
+        | `Write Bare`     | invalidpasswd\\n | # or instead of \\n: add_newline=True
         | ${output}=       | `Read`           |
         | `Should Contain` | ${output}        | su: Authentication failure |
 
         See also `Write`.
         """
-        self._write(text)
+        self._write(text, add_newline)
 
     def _write(self, text, add_newline=False):
         try:
@@ -1427,8 +1655,10 @@ class SSHLibrary(object):
         except SSHClientException as e:
             raise RuntimeError(e)
 
-    def write_until_expected_output(self, text, expected, timeout,
-                                    retry_interval, loglevel=None):
+    @keyword(tags=("command",))
+    def write_until_expected_output(
+        self, text, expected, timeout, retry_interval, loglevel=None
+    ):
         """Writes the given ``text`` repeatedly until ``expected`` appears in the server output.
 
         This keyword returns nothing.
@@ -1452,9 +1682,16 @@ class SSHLibrary(object):
 
         | `Write Until Expected Output` | lsof -c python27\\n | expected=myscript.py | timeout=5s | retry_interval=0.5s |
         """
-        self._read_and_log(loglevel, self.current.write_until_expected, text,
-                           expected, timeout, retry_interval)
+        self._read_and_log(
+            loglevel,
+            self.current.write_until_expected,
+            text,
+            expected,
+            timeout,
+            retry_interval,
+        )
 
+    @keyword(tags=("command",))
     def read(self, loglevel=None, delay=None):
         """Consumes and returns everything available on the server output.
 
@@ -1484,6 +1721,7 @@ class SSHLibrary(object):
         """
         return self._read_and_log(loglevel, self.current.read, delay)
 
+    @keyword(tags=("command",))
     def read_until(self, expected, loglevel=None):
         """Consumes and returns the server output until ``expected`` is encountered.
 
@@ -1510,6 +1748,7 @@ class SSHLibrary(object):
         """
         return self._read_and_log(loglevel, self.current.read_until, expected)
 
+    @keyword(tags=("command",))
     def read_until_prompt(self, loglevel=None, strip_prompt=False):
         """Consumes and returns the server output until the prompt is found.
 
@@ -1545,8 +1784,11 @@ class SSHLibrary(object):
 
         ``strip_prompt`` argument is new in SSHLibrary 3.2.0.
         """
-        return self._read_and_log(loglevel, self.current.read_until_prompt, is_truthy(strip_prompt))
+        return self._read_and_log(
+            loglevel, self.current.read_until_prompt, is_truthy(strip_prompt)
+        )
 
+    @keyword(tags=("command",))
     def read_until_regexp(self, regexp, loglevel=None):
         """Consumes and returns the server output until a match to ``regexp`` is found.
 
@@ -1575,8 +1817,7 @@ class SSHLibrary(object):
         details about reading and writing in general, see the `Interactive
         shells` section.
         """
-        return self._read_and_log(loglevel, self.current.read_until_regexp,
-                                  regexp)
+        return self._read_and_log(loglevel, self.current.read_until_regexp, regexp)
 
     def _read_and_log(self, loglevel, reader, *args):
         try:
@@ -1593,11 +1834,14 @@ class SSHLibrary(object):
 
     @staticmethod
     def _escape_ansi_sequences(output):
-        ansi_escape = re.compile(r'(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]', flags=re.IGNORECASE)
-        output = ansi_escape.sub('', output)
-        return ("%r" % output)[1:-1].encode().decode('unicode-escape')
+        ansi_escape = re.compile(
+            r"(?:\x1B[@-_]|[\x80-\x9F])[0-?]*[ -/]*[@-~]", flags=re.IGNORECASE
+        )
+        output = ansi_escape.sub("", output)
+        return (f"{output!r}")[1:-1].encode().decode("unicode-escape")
 
-    def get_file(self, source, destination='.', scp='OFF', scp_preserve_times=False):
+    @keyword(tags=("file",))
+    def get_file(self, source, destination=".", scp="OFF", scp_preserve_times=False):
         """Downloads file(s) from the remote machine to the local machine.
 
         ``source`` is a path on the remote machine. Both absolute paths and
@@ -1614,7 +1858,7 @@ class SSHLibrary(object):
         the file transfer. See `Transfer files with SCP` for more details.
 
         ``scp_preserve_times`` preserve modification time and access time
-        of transferred files and directories. It is ignored when running with Jython.
+        of transferred files and directories.
 
         Examples:
         | `Get File` | /var/log/auth.log | /tmp/                      |
@@ -1650,11 +1894,19 @@ class SSHLibrary(object):
 
         ``scp_preserve_times`` is new in SSHLibrary 3.6.0.
         """
-        return self._run_command(self.current.get_file, source,
-                                 destination, scp, scp_preserve_times)
+        return self._run_command(
+            self.current.get_file, source, destination, scp, scp_preserve_times
+        )
 
-    def get_directory(self, source, destination='.', recursive=False,
-                      scp='OFF', scp_preserve_times=False):
+    @keyword(tags=("file",))
+    def get_directory(
+        self,
+        source,
+        destination=".",
+        recursive=False,
+        scp="OFF",
+        scp_preserve_times=False,
+    ):
         """Downloads a directory, including its content, from the remote machine to the local machine.
 
         ``source`` is a path on the remote machine. Both absolute paths and
@@ -1672,7 +1924,7 @@ class SSHLibrary(object):
         the file transfer. See `Transfer files with SCP` for more details.
 
         ``scp_preserve_times`` preserve modification time and access time
-        of transferred files and directories. It is ignored when running with Jython.
+        of transferred files and directories.
 
         Examples:
         | `Get Directory` | /var/logs      | /tmp                |
@@ -1699,11 +1951,25 @@ class SSHLibrary(object):
 
         ``scp_preserve_times`` is new in SSHLibrary 3.6.0.
         """
-        return self._run_command(self.current.get_directory, source,
-                                 destination, is_truthy(recursive), scp, scp_preserve_times)
+        return self._run_command(
+            self.current.get_directory,
+            source,
+            destination,
+            is_truthy(recursive),
+            scp,
+            scp_preserve_times,
+        )
 
-    def put_file(self, source, destination='.', mode='0744', newline='',
-                 scp='OFF', scp_preserve_times=False):
+    @keyword(tags=("file",))
+    def put_file(
+        self,
+        source,
+        destination=".",
+        mode="0744",
+        newline="",
+        scp="OFF",
+        scp_preserve_times=False,
+    ):
         """Uploads file(s) from the local machine to the remote machine.
 
         ``source`` is the path on the local machine. Both absolute paths and
@@ -1729,7 +1995,7 @@ class SSHLibrary(object):
         the file transfer. See `Transfer files with SCP` for more details.
 
         ``scp_preserve_times`` preserve modification time and access time
-        of transferred files and directories. It is ignored when running with Jython.
+        of transferred files and directories.
 
         Examples:
         | `Put File` | /path/to/*.txt          |
@@ -1761,11 +2027,27 @@ class SSHLibrary(object):
 
         ``scp_preserve_times`` is new in SSHLibrary 3.6.0.
         """
-        return self._run_command(self.current.put_file, source,
-                                 destination, mode, newline, scp, scp_preserve_times)
+        return self._run_command(
+            self.current.put_file,
+            source,
+            destination,
+            mode,
+            newline,
+            scp,
+            scp_preserve_times,
+        )
 
-    def put_directory(self, source, destination='.', mode='0744', newline='',
-                      recursive=False, scp='OFF', scp_preserve_times=False):
+    @keyword(tags=("file",))
+    def put_directory(
+        self,
+        source,
+        destination=".",
+        mode="0744",
+        newline="",
+        recursive=False,
+        scp="OFF",
+        scp_preserve_times=False,
+    ):
         """Uploads a directory, including its content, from the local machine to the remote machine.
 
         ``source`` is the path on the local machine. Both absolute paths and
@@ -1791,7 +2073,7 @@ class SSHLibrary(object):
         the file transfer. See `Transfer files with SCP` for more details.
 
         ``scp_preserve_times`` preserve modification time and access time
-        of transferred files and directories. It is ignored when running with Jython.
+        of transferred files and directories.
 
         Examples:
         | `Put Directory` | /var/logs | /tmp               |
@@ -1817,9 +2099,16 @@ class SSHLibrary(object):
 
         ``scp_preserve_times`` is new in SSHLibrary 3.6.0.
         """
-        return self._run_command(self.current.put_directory, source,
-                                 destination, mode, newline,
-                                 is_truthy(recursive), scp, scp_preserve_times)
+        return self._run_command(
+            self.current.put_directory,
+            source,
+            destination,
+            mode,
+            newline,
+            is_truthy(recursive),
+            scp,
+            scp_preserve_times,
+        )
 
     def _run_command(self, command, *args):
         try:
@@ -1828,8 +2117,9 @@ class SSHLibrary(object):
             raise RuntimeError(e)
         if files:
             for src, dst in files:
-                self._log("'%s' -> '%s'" % (src, dst), self._config.loglevel)
+                self._log(f"'{src}' -> '{dst}'", self._config.loglevel)
 
+    @keyword(tags=("file",))
     def file_should_exist(self, path):
         """Fails if the given ``path`` does NOT point to an existing file.
 
@@ -1843,8 +2133,9 @@ class SSHLibrary(object):
         | `File Should Exist` | /initrd.img | # Points to /boot/initrd.img |
         """
         if not self.current.is_file(path):
-            raise AssertionError("File '%s' does not exist." % path)
+            raise AssertionError(f"File '{path}' does not exist.")
 
+    @keyword(tags=("file",))
     def file_should_not_exist(self, path):
         """Fails if the given ``path`` points to an existing file.
 
@@ -1858,8 +2149,9 @@ class SSHLibrary(object):
         ``/non/existing`` is a link that points an existing file.
         """
         if self.current.is_file(path):
-            raise AssertionError("File '%s' exists." % path)
+            raise AssertionError(f"File '{path}' exists.")
 
+    @keyword(tags=("file",))
     def directory_should_exist(self, path):
         """Fails if the given ``path`` does not point to an existing directory.
 
@@ -1873,8 +2165,9 @@ class SSHLibrary(object):
         | `Directory Should Exist` | /usr/local/man | # Points to /usr/share/man/ |
         """
         if not self.current.is_dir(path):
-            raise AssertionError("Directory '%s' does not exist." % path)
+            raise AssertionError(f"Directory '{path}' does not exist.")
 
+    @keyword(tags=("file",))
     def directory_should_not_exist(self, path):
         """Fails if the given ``path`` points to an existing directory.
 
@@ -1888,8 +2181,9 @@ class SSHLibrary(object):
         ``/non/existing`` is a link that points to an existing directory.
         """
         if self.current.is_dir(path):
-            raise AssertionError("Directory '%s' exists." % path)
+            raise AssertionError(f"Directory '{path}' exists.")
 
+    @keyword(tags=("file",))
     def list_directory(self, path, pattern=None, absolute=False):
         """Returns and logs items in the remote ``path``, optionally filtered with ``pattern``.
 
@@ -1923,10 +2217,15 @@ class SSHLibrary(object):
             items = self.current.list_dir(path, pattern, is_truthy(absolute))
         except SSHClientException as msg:
             raise RuntimeError(msg)
-        self._log('%d item%s:\n%s' % (len(items), plural_or_not(items),
-                                       '\n'.join(items)), self._config.loglevel)
+        self._log(
+            "{0} item{1}:\n{2}".format(
+                len(items), plural_or_not(items), "\n".join(items)
+            ),
+            self._config.loglevel,
+        )
         return items
 
+    @keyword(tags=("file",))
     def list_files_in_directory(self, path, pattern=None, absolute=False):
         """A wrapper for `List Directory` that returns only files."""
         absolute = is_truthy(absolute)
@@ -1934,27 +2233,47 @@ class SSHLibrary(object):
             files = self.current.list_files_in_dir(path, pattern, absolute)
         except SSHClientException as msg:
             raise RuntimeError(msg)
-        files = self.current.list_files_in_dir(path, pattern, absolute)
-        self._log('%d file%s:\n%s' % (len(files), plural_or_not(files),
-                                       '\n'.join(files)), self._config.loglevel)
+        self._log(
+            "{0} file{1}:\n{2}".format(
+                len(files), plural_or_not(files), "\n".join(files)
+            ),
+            self._config.loglevel,
+        )
         return files
 
+    @keyword(tags=("file",))
     def list_directories_in_directory(self, path, pattern=None, absolute=False):
         """A wrapper for `List Directory` that returns only directories."""
         try:
-            dirs = self.current.list_dirs_in_dir(path, pattern, is_truthy(absolute))
+            dirs = self.current.list_dirs_in_dir(
+                path, pattern, is_truthy(absolute))
         except SSHClientException as msg:
             raise RuntimeError(msg)
-        self._log('%d director%s:\n%s' % (len(dirs),
-                                           'y' if len(dirs) == 1 else 'ies',
-                                           '\n'.join(dirs)), self._config.loglevel)
+        self._log(
+            "{0} director{1}:\n{2}".format(
+                len(dirs), "y" if len(dirs) == 1 else "ies", "\n".join(dirs)
+            ),
+            self._config.loglevel,
+        )
         return dirs
 
 
 class _DefaultConfiguration(Configuration):
 
-    def __init__(self, timeout, newline, prompt, loglevel, term_type, width,
-                 height, path_separator, encoding, escape_ansi, encoding_errors):
+    def __init__(
+        self,
+        timeout,
+        newline,
+        prompt,
+        loglevel,
+        term_type,
+        width,
+        height,
+        path_separator,
+        encoding,
+        escape_ansi,
+        encoding_errors,
+    ):
         super(_DefaultConfiguration, self).__init__(
             timeout=TimeEntry(timeout),
             newline=NewlineEntry(newline),
@@ -1966,5 +2285,5 @@ class _DefaultConfiguration(Configuration):
             path_separator=StringEntry(path_separator),
             encoding=StringEntry(encoding),
             escape_ansi=StringEntry(escape_ansi),
-            encoding_errors=StringEntry(encoding_errors)
+            encoding_errors=StringEntry(encoding_errors),
         )

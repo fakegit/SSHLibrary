@@ -1,3 +1,26 @@
+.. list-table::
+   :header-rows: 0
+
+   * - Statistic:
+     - |_github_created_at|
+     - |_pypi_python_version|
+     - |_pypi_downloads|
+   * - Quality:
+     - |_github_main_status|
+     - Next Release:
+     - |_github_milestone_4|
+   * - Pulse:
+     - |_github_latest_release|
+     - |_github_commits_since_release|
+     - |_github_last_commit|
+
+Where is version 4.0?
+===============
+See Milestone 4.0: https://github.com/MarketSquare/SSHLibrary/milestone/25
+
+If you want to assist in accelerating the next release, consider contributing.
+
+
 SSHLibrary
 ===============
 
@@ -10,9 +33,7 @@ SSHLibrary_ is a `Robot Framework`_ test
 library for SSH and SFTP.  The project is hosted on GitHub_
 and downloads can be found from PyPI_.
 
-SSHLibrary is operating system independent and supports Python 2.7 as well
-as Python 3.4 or newer. In addition to the normal Python_ interpreter,
-it also works with `Jython 2.7`_.
+SSHLibrary is operating system independent and supports Python 3.6 or newer.
 
 The library has the following main usages:
 
@@ -24,9 +45,6 @@ The library has the following main usages:
 
 .. image:: https://img.shields.io/pypi/l/robotframework-sshlibrary.svg
    :target: http://www.apache.org/licenses/LICENSE-2.0
-
-.. image:: https://api.travis-ci.org/robotframework/SSHLibrary.png
-   :target: http://travis-ci.org/robotframework/SSHLibrary
 
 Documentation
 -------------
@@ -54,24 +72,16 @@ With recent versions of ``pip`` it is possible to install directly from the
 GitHub_ repository. To install latest source from the master branch, use
 this command::
 
-    pip install git+https://github.com/robotframework/SSHLibrary.git
+    pip install git+https://github.com/MarketSquare/SSHLibrary.git
 
 Alternatively you can download the source distribution from PyPI_, extract
-it, and install it using one of the following depending are you using
-Python or Jython::
+it, and install it using one the command::
 
     python setup.py install
-    jython setup.py install
 
 A benefit of using pip is that it automatically installs scp, paramiko
 and Cryptography_ modules (or PyCrypto_ if paramiko version < 2.0)
-that SSHLibrary requires on Python.
-
-On Jython, SSHLibrary requires Trilead SSH JAR distribution. You need to download
-`Trilead SSH JAR distribution`_ and add it to CLASSPATH.
-
-On Windows operating system, when using Python version < 3.0, SSHLibrary will
-require win_inet_pton_. The minimum supported win_inet_pton version is ``1.1.0``.
+that SSHLibrary requires.
 
 For creating SSH tunnels robotbackgroundlogger_ > 1.2 is also a requirement.
 
@@ -143,19 +153,17 @@ available:
 
 .. _Robot Framework: http://robotframework.org
 .. _Robot Framework User Guide: http://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#using-test-libraries
-.. _SSHLibrary: https://github.com/robotframework/SSHLibrary
-.. _GitHub: https://github.com/robotframework/SSHLibrary
+.. _SSHLibrary: https://github.com/MarketSquare/SSHLibrary
+.. _GitHub: https://github.com/MarketSquare/SSHLibrary
 .. _Python: http://python.org
 .. _pip: http://pip-installer.org
 .. _PyPI: https://pypi.python.org/pypi/robotframework-sshlibrary
-.. _Keyword Documentation: http://robotframework.org/SSHLibrary/SSHLibrary.html
+.. _Keyword Documentation: https://marketsquare.github.io/SSHLibrary/SSHLibrary.html
 .. _Jython 2.7: http://jython.org
 .. _paramiko: http://www.paramiko.org
 .. _scp: https://github.com/jbardin/scp.py
 .. _Cryptography: https://cryptography.io
 .. _PyCrypto: http://www.pycrypto.org
-.. _Trilead SSH JAR distribution: http://search.maven.org/remotecontent?filepath=com/trilead/trilead-ssh2/1.0.0-build221/trilead-ssh2-1.0.0-build221.jar
-.. _win_inet_pton: https://github.com/hickeroar/win_inet_pton
 .. _robotbackgroundlogger: https://github.com/robotframework/robotbackgroundlogger
 .. _gcc: https://pkgs.alpinelinux.org/packages?name=gcc&branch=edge
 .. _make: https://pkgs.alpinelinux.org/packages?name=make&branch=edge
@@ -164,5 +172,29 @@ available:
 .. _libffi-dev: https://pkgs.alpinelinux.org/packages?name=libffi-dev&branch=edge
 .. _robotframework-users: http://groups.google.com/group/robotframework-users
 .. _Slack community: https://robotframework-slack-invite.herokuapp.com
-.. _issue tracker: https://github.com/robotframework/SSHLibrary/issues
+.. _issue tracker: https://github.com/MarketSquare/SSHLibrary/issues
 .. _Other support forums: http://robotframework.org/#support
+
+.. |_github_created_at| image:: https://img.shields.io/github/created-at/MarketSquare/SSHLibrary?logo=robotframework
+   :alt: GitHub Created At
+
+.. |_pypi_downloads| image:: https://img.shields.io/pypi/dm/robotframework-sshlibrary
+   :alt: PyPI - Downloads
+
+.. |_github_milestone_4| image:: https://img.shields.io/github/milestones/progress-percent/MarketSquare/SSHLibrary/25
+   :alt: GitHub milestone details
+
+.. |_pypi_python_version| image:: https://img.shields.io/pypi/pyversions/robotframework-sshlibrary
+   :alt: PyPI - Python Version
+
+.. |_github_main_status| image:: https://img.shields.io/github/check-runs/MarketSquare/SSHLibrary/master
+   :alt: GitHub branch check runs
+
+.. |_github_commits_since_release| image:: https://img.shields.io/github/commits-since/MarketSquare/SSHLibrary/latest
+   :alt: GitHub commits since latest release
+
+.. |_github_latest_release| image:: https://img.shields.io/github/release-date/MarketSquare/SSHLibrary
+   :alt: GitHub Release Date
+
+.. |_github_last_commit| image:: https://img.shields.io/github/last-commit/MarketSquare/SSHLibrary
+   :alt: GitHub last commit
